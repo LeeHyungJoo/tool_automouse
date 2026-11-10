@@ -18,8 +18,8 @@
 // (including AltGr) are excluded. Only recognized P/S down/repeat/up events are
 // consumed; the Alt+C prefix still reaches the foreground application.
 //
-// startMessage receives the captured signed desktop x in WPARAM and signed y
-// in LPARAM (decode x via static_cast<INT_PTR>). stopMessage has zero arguments.
+// Both command messages have zero arguments. The click engine captures the
+// pointer position only when the optional fixed-position mode is enabled.
 class GlobalHotkeys final {
 public:
     GlobalHotkeys() = default;

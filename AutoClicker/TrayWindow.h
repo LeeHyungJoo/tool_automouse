@@ -23,7 +23,7 @@ protected:
     afx_msg LRESULT OnSessionChange(WPARAM event, LPARAM session);
     afx_msg LRESULT OnTrayEvent(WPARAM, LPARAM event);
     afx_msg LRESULT OnTaskbarCreated(WPARAM, LPARAM);
-    afx_msg LRESULT OnStartClicking(WPARAM x, LPARAM y);
+    afx_msg LRESULT OnStartClicking(WPARAM, LPARAM);
     afx_msg LRESULT OnStopClicking(WPARAM, LPARAM);
     afx_msg LRESULT OnClickError(WPARAM error, LPARAM);
     afx_msg void OnSettings();
@@ -41,13 +41,14 @@ private:
     void DrainHotkeyMessages() noexcept;
     void Cleanup() noexcept;
     static UINT LoadInterval();
-    static LONG SaveInterval(UINT value);
+    static bool LoadFixedPosition();
+    static LONG SaveSettings(UINT intervalMs, bool fixedPosition);
     static void ShowSystemError(LPCWSTR description, DWORD error);
 
     GlobalHotkeys m_hotkeys;
     ClickEngine m_clicker;
     UINT m_intervalMs = 1000;
-    POINT m_target{};
+    bool m_fixedPosition = false;
     HICON m_idleIcon = nullptr;
     HICON m_runningIcon = nullptr;
     bool m_running = false;

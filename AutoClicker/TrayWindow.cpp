@@ -57,6 +57,7 @@ int TrayWindow::OnCreate(LPCREATESTRUCT createStruct)
     if (CWnd::OnCreate(createStruct) == -1)
         return -1;
     m_intervalMs = LoadInterval();
+    m_fixedPosition = LoadFixedPosition();
     m_idleIcon = LoadIconW(AfxGetInstanceHandle(), MAKEINTRESOURCEW(IDI_AUTOCLICKER_IDLE));
     m_runningIcon = LoadIconW(AfxGetInstanceHandle(), MAKEINTRESOURCEW(IDI_AUTOCLICKER_RUNNING));
     if (!m_idleIcon || !m_runningIcon || !AddTrayIcon())
@@ -89,16 +90,30 @@ UINT TrayWindow::LoadInterval()
     return value;
 }
 
-LONG TrayWindow::SaveInterval(UINT value)
+bool TrayWindow::LoadFixedPosition()
+{
+    DWORD value = 0;
+    DWORD size = sizeof(value);
+    return RegGetValueW(HKEY_CURRENT_USER, kRegistryPath, L"FixedPosition", RRF_RT_REG_DWORD,
+        nullptr, &value, &size) == ERROR_SUCCESS && value == 1;
+}
+
+LONG TrayWindow::SaveSettings(UINT intervalMs, bool fixedPosition)
 {
     HKEY key = nullptr;
     LONG result = RegCreateKeyExW(HKEY_CURRENT_USER, kRegistryPath, 0, nullptr, 0,
         KEY_SET_VALUE, nullptr, &key, nullptr);
     if (result != ERROR_SUCCESS)
         return result;
-    const DWORD data = value;
+    const DWORD data = intervalMs;
     result = RegSetValueExW(key, L"IntervalMs", 0, REG_DWORD,
         reinterpret_cast<const BYTE*>(&data), sizeof(data));
+    if (result == ERROR_SUCCESS)
+    {
+        const DWORD fixed = fixedPosition ? 1 : 0;
+        result = RegSetValueExW(key, L"FixedPosition", 0, REG_DWORD,
+            reinterpret_cast<const BYTE*>(&fixed), sizeof(fixed));
+    }
     RegCloseKey(key);
     return result;
 }
@@ -134,10 +149,9 @@ void TrayWindow::UpdateTrayIcon()
     icon.uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP;
     icon.hIcon = m_running ? m_runningIcon : m_idleIcon;
     CString tip;
-    if (m_running)
-        tip.Format(L"오토클릭 · 실행 중 (%ld, %ld) · %u ms", m_target.x, m_target.y, m_intervalMs);
-    else
-        tip.Format(L"오토클릭 · 정지 · %u ms", m_intervalMs);
+    tip.Format(L"오토클릭 · %s · %s · %u ms",
+        m_running ? L"실행 중" : L"정지",
+        m_fixedPosition ? L"시작 위치 고정" : L"포인터 따라 클릭", m_intervalMs);
     wcsncpy_s(icon.szTip, tip.GetString(), _TRUNCATE);
     Shell_NotifyIconW(NIM_MODIFY, &icon);
 }
@@ -214,14 +228,12 @@ void TrayWindow::ShowTrayMenu()
     m_menuOpen = false;
 }
 
-LRESULT TrayWindow::OnStartClicking(WPARAM x, LPARAM y)
+LRESULT TrayWindow::OnStartClicking(WPARAM, LPARAM)
 {
     if (m_closing || m_sessionLocked || m_sessionDisconnected || m_powerSuspended || !m_hotkeysActive ||
         m_running || m_menuOpen || m_settingsWindow)
         return 0;
-    m_target.x = static_cast<LONG>(static_cast<INT_PTR>(x));
-    m_target.y = static_cast<LONG>(y);
-    if (!m_clicker.Start(m_target, m_intervalMs, GetSafeHwnd(), kClickErrorMessage))
+    if (!m_clicker.Start(m_intervalMs, m_fixedPosition, GetSafeHwnd(), kClickErrorMessage))
         ShowSystemError(L"오토클릭을 시작할 수 없습니다.", m_clicker.LastError());
     else
     {
@@ -306,17 +318,18 @@ void TrayWindow::OnSettings()
             m_settingsWindow->SetForegroundWindow();
         return;
     }
-    SettingsDialog settings(m_intervalMs, this);
+    SettingsDialog settings(m_intervalMs, m_fixedPosition, this);
     m_settingsWindow = &settings;
     const INT_PTR result = settings.DoModal();
     m_settingsWindow = nullptr;
     if (result == IDOK)
     {
         m_intervalMs = settings.IntervalMs();
-        const LONG saved = SaveInterval(m_intervalMs);
+        m_fixedPosition = settings.FixedPosition();
+        const LONG saved = SaveSettings(m_intervalMs, m_fixedPosition);
         UpdateTrayIcon();
         if (saved != ERROR_SUCCESS)
-            ShowSystemError(L"설정은 적용했지만 저장하지 못했습니다. 다음 실행 시 이전 값이 사용됩니다.", saved);
+            ShowSystemError(L"설정은 현재 실행에 적용했지만 일부 항목을 저장하지 못했습니다.", saved);
     }
 }
 

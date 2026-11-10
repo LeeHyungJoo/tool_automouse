@@ -6,11 +6,12 @@ BEGIN_MESSAGE_MAP(SettingsDialog, CDialogEx)
     ON_CBN_SELCHANGE(IDC_INTERVAL_UNIT, &SettingsDialog::OnUnitChanged)
 END_MESSAGE_MAP()
 
-SettingsDialog::SettingsDialog(UINT intervalMs, CWnd* parent)
+SettingsDialog::SettingsDialog(UINT intervalMs, bool fixedPosition, CWnd* parent)
     : CDialogEx(IDD_SETTINGS, parent),
       m_intervalMs(intervalMs >= autoclicker::kMinIntervalMs &&
           intervalMs <= autoclicker::kMaxIntervalMs
-          ? intervalMs : autoclicker::kDefaultIntervalMs)
+          ? intervalMs : autoclicker::kDefaultIntervalMs),
+      m_fixedPosition(fixedPosition)
 {
 }
 
@@ -23,7 +24,8 @@ BOOL SettingsDialog::OnInitDialog()
     unit->SetCurSel(m_previousUnitIndex);
     static_cast<CEdit*>(GetDlgItem(IDC_INTERVAL_EDIT))->SetLimitText(16);
     SetIntervalText(m_intervalMs, m_previousUnitIndex);
-    SetDlgItemText(IDC_STATUS_TEXT, L"설정창을 열면 오토클릭이 정지합니다.");
+    CheckDlgButton(IDC_FIXED_POSITION, m_fixedPosition ? BST_CHECKED : BST_UNCHECKED);
+    SetDlgItemText(IDC_STATUS_TEXT, L"설정창을 열면 정지합니다. 적용 후 시작 단축키로 다시 실행하세요.");
     return TRUE;
 }
 
@@ -92,5 +94,6 @@ void SettingsDialog::OnOK()
         return;
     }
     m_intervalMs = *parsed;
+    m_fixedPosition = IsDlgButtonChecked(IDC_FIXED_POSITION) == BST_CHECKED;
     CDialogEx::OnOK();
 }

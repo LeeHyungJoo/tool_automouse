@@ -25,7 +25,7 @@ ClickEngine::~ClickEngine()
     Stop();
 }
 
-bool ClickEngine::Start(POINT target, UINT intervalMs, HWND owner, UINT errorMessage)
+bool ClickEngine::Start(UINT intervalMs, bool fixedPosition, HWND owner, UINT errorMessage)
 {
     Stop();
     if (intervalMs < autoclicker::kMinIntervalMs || intervalMs > autoclicker::kMaxIntervalMs)
@@ -34,13 +34,20 @@ bool ClickEngine::Start(POINT target, UINT intervalMs, HWND owner, UINT errorMes
         return false;
     }
     m_lastError = ERROR_SUCCESS;
+    POINT target{};
+    if (fixedPosition && !GetCursorPos(&target))
+    {
+        const DWORD error = GetLastError();
+        m_lastError = error == ERROR_SUCCESS ? ERROR_ACCESS_DENIED : error;
+        return false;
+    }
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_stop = false;
     }
     try
     {
-        m_worker = std::thread(&ClickEngine::Run, this, target, intervalMs, owner, errorMessage);
+        m_worker = std::thread(&ClickEngine::Run, this, target, fixedPosition, intervalMs, owner, errorMessage);
     }
     catch (const std::system_error&)
     {
@@ -69,24 +76,29 @@ bool ClickEngine::ModifiersHeld() noexcept
         KeyHeld(VK_LWIN) || KeyHeld(VK_RWIN);
 }
 
-DWORD ClickEngine::SendClick(POINT target) noexcept
+DWORD ClickEngine::SendClick(POINT target, bool fixedPosition) noexcept
 {
-    const int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    const int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-    if (width <= 0 || height <= 0 || !MonitorFromPoint(target, MONITOR_DEFAULTTONULL))
-        return ERROR_INVALID_MONITOR_HANDLE;
-
     INPUT input[3]{};
-    input[0].type = INPUT_MOUSE;
-    input[0].mi.dx = NormalizeCoordinate(target.x, GetSystemMetrics(SM_XVIRTUALSCREEN), width);
-    input[0].mi.dy = NormalizeCoordinate(target.y, GetSystemMetrics(SM_YVIRTUALSCREEN), height);
-    input[0].mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
-    input[1].type = INPUT_MOUSE;
-    input[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-    input[2].type = INPUT_MOUSE;
-    input[2].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+    UINT count = 0;
+    if (fixedPosition)
+    {
+        const int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+        const int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+        if (width <= 0 || height <= 0 || !MonitorFromPoint(target, MONITOR_DEFAULTTONULL))
+            return ERROR_INVALID_MONITOR_HANDLE;
+        input[count].type = INPUT_MOUSE;
+        input[count].mi.dx = NormalizeCoordinate(target.x, GetSystemMetrics(SM_XVIRTUALSCREEN), width);
+        input[count].mi.dy = NormalizeCoordinate(target.y, GetSystemMetrics(SM_YVIRTUALSCREEN), height);
+        input[count++].mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK;
+    }
+    // With position fixing disabled, send button events only. Windows applies
+    // them at the current pointer position without moving or constraining it.
+    input[count].type = INPUT_MOUSE;
+    input[count++].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+    input[count].type = INPUT_MOUSE;
+    input[count++].mi.dwFlags = MOUSEEVENTF_LEFTUP;
     SetLastError(ERROR_SUCCESS);
-    if (SendInput(3, input, sizeof(INPUT)) == 3)
+    if (SendInput(count, input, sizeof(INPUT)) == count)
         return ERROR_SUCCESS;
 
     // SendInput may insert only part of a batch. Release a possibly inserted
@@ -99,7 +111,7 @@ DWORD ClickEngine::SendClick(POINT target) noexcept
     return error == ERROR_SUCCESS ? ERROR_ACCESS_DENIED : error;
 }
 
-void ClickEngine::Run(POINT target, UINT intervalMs, HWND owner, UINT errorMessage) noexcept
+void ClickEngine::Run(POINT target, bool fixedPosition, UINT intervalMs, HWND owner, UINT errorMessage) noexcept
 {
     bool awaitingStartRelease = true;
     DWORD failure = ERROR_SUCCESS;
@@ -121,7 +133,7 @@ void ClickEngine::Run(POINT target, UINT intervalMs, HWND owner, UINT errorMessa
 
         // Keep the stop lock while inserting the short batch. After Stop()
         // returns, all input insertion and the worker have completed.
-        failure = SendClick(target);
+        failure = SendClick(target, fixedPosition);
         if (failure != ERROR_SUCCESS)
         {
             m_lastError = failure;

@@ -8,8 +8,9 @@
 class SettingsDialog final : public CDialogEx
 {
 public:
-    explicit SettingsDialog(UINT intervalMs, CWnd* parent = nullptr);
+    explicit SettingsDialog(UINT intervalMs, bool fixedPosition, CWnd* parent = nullptr);
     UINT IntervalMs() const noexcept { return m_intervalMs; }
+    bool FixedPosition() const noexcept { return m_fixedPosition; }
 
 protected:
     BOOL OnInitDialog() override;
@@ -22,5 +23,6 @@ private:
     void ShowInputError();
 
     UINT m_intervalMs;
+    bool m_fixedPosition = false;
     int m_previousUnitIndex = 0;
 };

@@ -50,6 +50,7 @@ inline constexpr DWORD MOUSEEVENTF_VIRTUALDESK = 0x4000;
 inline constexpr DWORD MOUSEEVENTF_ABSOLUTE = 0x8000;
 
 short GetAsyncKeyState(int key);
+BOOL GetCursorPos(POINT* point);
 int GetSystemMetrics(int metric);
 HMONITOR MonitorFromPoint(POINT point, DWORD flags);
 void SetLastError(DWORD error);
