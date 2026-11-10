@@ -359,7 +359,7 @@ LRESULT TrayWindow::OnSessionChange(WPARAM event, LPARAM)
     return 0;
 }
 
-BOOL TrayWindow::OnPowerBroadcast(UINT event, LPARAM)
+UINT TrayWindow::OnPowerBroadcast(UINT event, LPARAM)
 {
     if (event == PBT_APMSUSPEND)
         m_powerSuspended = true;

@@ -14,7 +14,6 @@ BOOL CAutoClickerApp::InitInstance()
     CWinApp::InitInstance();
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_WIN95_CLASSES};
     InitCommonControlsEx(&controls);
-    AfxEnableControlContainer();
 
     m_instanceMutex = CreateMutexW(nullptr, FALSE, L"Local\\MfcAutoClicker.Singleton.v1");
     const DWORD mutexError = GetLastError();

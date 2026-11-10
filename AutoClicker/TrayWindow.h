@@ -18,7 +18,7 @@ protected:
     afx_msg void OnClose();
     afx_msg void OnEndSession(BOOL ending);
     afx_msg BOOL OnQueryEndSession();
-    afx_msg BOOL OnPowerBroadcast(UINT event, LPARAM data);
+    afx_msg UINT OnPowerBroadcast(UINT event, LPARAM data);
     afx_msg void OnDisplayChange(UINT depth, int width, int height);
     afx_msg LRESULT OnSessionChange(WPARAM event, LPARAM session);
     afx_msg LRESULT OnTrayEvent(WPARAM, LPARAM event);
