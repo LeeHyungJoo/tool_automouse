@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.ref_name }}
+
+jobs:
+  portable-tests:
+    name: Validate version and core tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag and version metadata
+        run: python3 scripts/version.py --check --tag "$RELEASE_TAG"
+      - name: Verify release notes heading
+        run: |
+          IFS= read -r heading < RELEASE_NOTES.md
+          if [[ "$heading" != "# tool_automouse $RELEASE_TAG" ]]; then
+            echo "::error::RELEASE_NOTES.md must start with: # tool_automouse $RELEASE_TAG"
+            exit 1
+          fi
+      - name: Run version tests
+        run: python3 -m unittest discover -s tests -p version_tests.py
+      - name: Run core tests
+        run: bash tests/run_portable.sh
+
+  windows-build:
+    name: Package Windows (${{ matrix.arch }})
+    needs: portable-tests
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            arch: x64
+          - platform: Win32
+            arch: x86
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag and version metadata
+        run: python scripts/version.py --check --tag "$env:RELEASE_TAG"
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Verify installed MFC components
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.ATLMFC -property installationPath
+          if (-not $vs -or -not (Test-Path "$vs\VC\Tools\MSVC\*\atlmfc\include\afxwin.h")) {
+            throw 'Visual Studio v143 MFC (x86 and x64) is required.'
+          }
+      - name: Build Release
+        run: msbuild AutoClicker.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /verbosity:minimal
+      - name: Verify executable version and package
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $exe = 'bin/${{ matrix.platform }}/Release/AutoClicker.exe'
+          $info = (Get-Item $exe).VersionInfo
+          if ($info.FileVersion -cne $version -or $info.ProductVersion -cne $version) {
+            throw "Executable version does not match VERSION: FileVersion=$($info.FileVersion), ProductVersion=$($info.ProductVersion), expected=$version"
+          }
+          New-Item -ItemType Directory -Force packages | Out-Null
+          Compress-Archive -Path $exe, README.md, VERSION -DestinationPath "packages/tool_automouse-v$version-windows-${{ matrix.arch }}.zip"
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-${{ matrix.arch }}
+          path: packages/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [portable-tests, windows-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag and version metadata
+        run: python3 scripts/version.py --check --tag "$RELEASE_TAG"
+      - name: Download release packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-package-*
+          path: packages
+          merge-multiple: true
+      - name: Create draft, upload assets, and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(cat VERSION)
+          cd packages
+          x64="tool_automouse-v${version}-windows-x64.zip"
+          x86="tool_automouse-v${version}-windows-x86.zip"
+          sha256sum "$x64" "$x86" > SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" --verify-tag --draft \
+            --title "tool_automouse $RELEASE_TAG" --notes-file ../RELEASE_NOTES.md \
+            "$x64" "$x86" SHA256SUMS.txt
+          gh release edit "$RELEASE_TAG" --draft=false --latest

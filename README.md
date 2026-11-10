@@ -2,6 +2,10 @@
 
 Windows 10/11용 C++17 MFC 시스템 트레이 오토클릭 앱입니다. 실행하면 창 대신 트레이 아이콘이 표시되며, 다른 프로그램을 사용하는 동안에도 단축키로 제어할 수 있습니다.
 
+## 다운로드
+
+[GitHub Releases](https://github.com/LeeHyungJoo/tool_automouse/releases)에서 Windows에 맞는 ZIP을 내려받아 압축을 풀고 `AutoClicker.exe`를 실행합니다. 64비트 Windows에는 `windows-x64`, 32비트 Windows에는 `windows-x86` 파일을 사용합니다. ZIP에는 실행 파일, 사용 안내와 버전 정보가 포함됩니다.
+
 ## 빌드
 
 필요한 개발 환경:
@@ -22,6 +26,35 @@ msbuild AutoClicker.sln /m /p:Configuration=Release /p:Platform=x64
 Win32 빌드는 `/p:Platform=Win32`를 사용합니다.
 
 GitHub Actions의 **Build and test** 워크플로는 Linux 핵심 테스트와 Windows x64·Win32 Release 빌드를 수행합니다. 성공한 실행의 **Artifacts**에서 `AutoClicker-Windows-x64` 또는 `AutoClicker-Windows-Win32`를 내려받으면 실행 파일을 사용할 수 있습니다. PR, `main` 브랜치 push, 수동 실행을 지원합니다.
+
+## 버전 관리와 릴리스
+
+버전은 **주.부.수(MAJOR.MINOR.PATCH)** 형식으로 관리하며 첫 정식 버전은 **1.0.0**입니다. Git 태그에는 `v`를 붙여 `v1.0.0`처럼 표시합니다.
+
+| 구분 | 올리는 기준 | 예시 |
+|---|---|---|
+| 주(MAJOR) | 기존 사용 방식과 호환되지 않는 변경 | `1.2.3` → `2.0.0` |
+| 부(MINOR) | 기존 기능과 호환되는 새 기능 | `1.2.3` → `1.3.0` |
+| 수(PATCH) | 기존 기능과 호환되는 버그 수정 | `1.2.3` → `1.2.4` |
+
+`VERSION`이 버전의 기준입니다. Python 3으로 다음 중 하나를 실행하면 `VERSION`, Windows 버전 리소스 헤더, 앱 매니페스트를 함께 갱신합니다.
+
+```sh
+python scripts/version.py --bump patch
+python scripts/version.py --bump minor
+python scripts/version.py --bump major
+```
+
+변경에 맞는 명령 **하나만** 실행하고 `RELEASE_NOTES.md`를 새 버전 내용으로 갱신한 뒤 커밋합니다. 상위 버전을 올리면 하위 버전은 0으로 초기화됩니다. Windows 버전 리소스 제약에 따라 각 숫자는 0~65535 범위입니다. Windows 내부의 네 번째 버전 숫자는 0으로 유지합니다.
+
+```sh
+python scripts/version.py --check
+python scripts/version.py --check --tag v1.0.0
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+```
+
+위 `v1.0.0`은 게시할 버전으로 바꿉니다. 버전 변경을 검증해 `main`에 반영한 뒤 해당 커밋에 태그를 만듭니다. **Release** 워크플로는 태그와 버전 정보가 일치하는지 검사하고, 핵심 테스트 및 Windows x64·Win32 빌드가 모두 성공하면 두 ZIP과 `SHA256SUMS.txt`를 GitHub Release에 게시합니다. 버전이나 태그가 일치하지 않으면 게시하지 않습니다. 이미 게시한 버전은 수정하지 않고 새 버전을 올립니다.
 
 ## 사용 방법
 
