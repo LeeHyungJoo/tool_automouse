@@ -75,3 +75,7 @@ obj/
 *.suo
 *.VC.db
 *.VC.VC.opendb
+
+# Python version tooling
+__pycache__/
+*.py[cod]

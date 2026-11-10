@@ -178,6 +178,7 @@
     <ClInclude Include="Core\Interval.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />

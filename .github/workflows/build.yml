@@ -20,6 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check version metadata
+        run: python3 scripts/version.py --check
+      - name: Test version management
+        run: python3 -m unittest discover -s tests -p version_tests.py
       - name: Run core tests
         run: bash tests/run_portable.sh
 
@@ -32,6 +36,8 @@ jobs:
         platform: [x64, Win32]
     steps:
       - uses: actions/checkout@v4
+      - name: Check version metadata
+        run: python scripts/version.py --check
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
       - name: Verify installed MFC components
