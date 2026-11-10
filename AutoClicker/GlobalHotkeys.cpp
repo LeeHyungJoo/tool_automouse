@@ -184,13 +184,7 @@ LRESULT CALLBACK GlobalHotkeys::KeyboardProc(int code, WPARAM wParam, LPARAM lPa
     const auto result = self->state_.Process(key, down);
     bool delivered = true;
     if (result.action == autoclicker::ChordState::Action::Start) {
-        POINT target{};
-        if (!::GetCursorPos(&target)) {
-            self->RecordError(::GetLastError());
-            delivered = false;
-        } else if (!::PostMessageW(self->owner_, self->startMessage_,
-            static_cast<WPARAM>(static_cast<INT_PTR>(target.x)),
-            static_cast<LPARAM>(target.y))) {
+        if (!::PostMessageW(self->owner_, self->startMessage_, 0, 0)) {
             self->RecordError(::GetLastError());
             delivered = false;
         }

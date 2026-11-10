@@ -16,14 +16,14 @@ public:
     ClickEngine(const ClickEngine&) = delete;
     ClickEngine& operator=(const ClickEngine&) = delete;
 
-    bool Start(POINT target, UINT intervalMs, HWND owner, UINT errorMessage);
+    bool Start(UINT intervalMs, bool fixedPosition, HWND owner, UINT errorMessage);
     void Stop() noexcept;
     DWORD LastError() const noexcept { return m_lastError.load(); }
 
 private:
-    void Run(POINT target, UINT intervalMs, HWND owner, UINT errorMessage) noexcept;
+    void Run(POINT target, bool fixedPosition, UINT intervalMs, HWND owner, UINT errorMessage) noexcept;
     static bool ModifiersHeld() noexcept;
-    static DWORD SendClick(POINT target) noexcept;
+    static DWORD SendClick(POINT target, bool fixedPosition) noexcept;
 
     std::mutex m_mutex;
     std::condition_variable m_wake;
