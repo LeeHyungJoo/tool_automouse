@@ -1,4 +1,4 @@
-# hj_automouse
+# tool_automouse
 Windows 전용 시스템 트레이 기반 마우스 오토클릭 프로그램.
 
 ## 주요 기능
