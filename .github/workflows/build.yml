@@ -1,0 +1,52 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  portable-tests:
+    name: Portable core tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run core tests
+        run: bash tests/run_portable.sh
+
+  windows-build:
+    name: Windows Release (${{ matrix.platform }})
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64, Win32]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Verify installed MFC components
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.ATLMFC -property installationPath
+          if (-not $vs -or -not (Test-Path "$vs\VC\Tools\MSVC\*\atlmfc\include\afxwin.h")) {
+            throw 'Visual Studio v143 MFC (x86 and x64) is required.'
+          }
+      - name: Build Release
+        run: msbuild AutoClicker.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /verbosity:minimal
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoClicker-Windows-${{ matrix.platform }}
+          path: bin/${{ matrix.platform }}/Release/AutoClicker.exe
+          if-no-files-found: error

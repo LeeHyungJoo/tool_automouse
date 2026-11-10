@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files"><UniqueIdentifier>{B3C178C1-15DD-41D6-B8AE-427A6DFA2BF9}</UniqueIdentifier></Filter>
+    <Filter Include="Header Files"><UniqueIdentifier>{B353FA34-28FE-465F-883C-5225C92F1521}</UniqueIdentifier></Filter>
+    <Filter Include="Resource Files"><UniqueIdentifier>{70E56946-D8E6-4A24-B6C4-723FF17E5F91}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="TrayWindow.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="SettingsDialog.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="ClickEngine.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GlobalHotkeys.cpp"><Filter>Source Files</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="TrayWindow.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="SettingsDialog.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="ClickEngine.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="GlobalHotkeys.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="Core\ChordState.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="Core\Interval.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="resource.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="targetver.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AutoClicker.rc"><Filter>Resource Files</Filter></ResourceCompile>
+    <None Include="AutoClicker.manifest"><Filter>Resource Files</Filter></None>
+    <Image Include="res\idle.ico"><Filter>Resource Files</Filter></Image>
+    <Image Include="res\running.ico"><Filter>Resource Files</Filter></Image>
+  </ItemGroup>
+</Project>
